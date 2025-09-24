@@ -194,43 +194,44 @@ h3 {
     @apply flex gap-2 justify-end py-3 px-[14px] border-t border-[#27314f];
   }
 
-  /* ===================== Quill ===================== */
-  .ql-container.ql-snow {
+  /* ===================== Rich text editor (Tiptap) ===================== */
+  .rt-toolbar {
+    @apply bg-[#131e38] border border-slate-700 rounded-t-xl px-2 py-1 flex items-center gap-2;
+  }
+  .rt-toolbar--mini {
+    @apply px-1 py-0.5;
+  }
+  .rt-btn {
+    @apply text-slate-200 text-xs leading-none px-2 py-1 rounded-md border border-transparent hover:bg-white/10;
+  }
+  .rt-btn.is-active {
+    @apply bg-white/15 text-white;
+  }
+  .rt-sep {
+    @apply inline-block w-px h-4 bg-slate-600 mx-1;
+  }
+  .rt-color {
+    @apply w-8 h-6 p-0 border border-slate-500 rounded-md bg-transparent cursor-pointer;
+  }
+  .rt-container {
     @apply bg-white text-[#111827] border border-slate-700 rounded-b-xl overflow-hidden;
   }
-  .ql-toolbar.ql-snow {
-    @apply bg-[#131e38] border border-slate-700! border-b-0 rounded-t-xl;
+  .tiptap {
+    @apply min-h-[120px] py-3 px-4 text-[#111827] text-sm leading-[1.6] outline-none;
   }
-  .ql-editor {
-    @apply min-h-[120px] py-3 px-4 text-[#111827] text-sm leading-[1.6];
+  .tiptap a {
+    @apply text-blue-600 underline;
   }
-  .ql-editor.ql-blank::before {
-    @apply text-gray-400 not-italic;
-  }
-  .ql-snow .ql-picker,
-  .ql-snow .ql-picker-options .ql-picker-item,
-  .ql-snow .ql-picker-label {
-    @apply text-slate-200;
-  }
-  .ql-snow .ql-picker-options {
-    @apply bg-[#0b1224]! border-slate-700!;
-  }
-  .ql-editor a {
-    @apply text-blue-300 underline;
-  }
-  .ql-container.ql-snow:focus-within {
-    @apply outline-2 outline-blue-400 outline-offset-0 border-blue-400 rounded-b-xl;
-  }
-
-  /* Inline Quill */
-  .inline-quill .ql-editor {
+  .tiptap--mini {
     @apply min-h-10 max-h-20 py-2 px-3 overflow-y-auto;
   }
-  .inline-quill .ql-container.ql-snow {
-    @apply rounded-b-lg;
-  }
-  .inline-quill .ql-toolbar.ql-snow {
+
+  /* Inline RT wrapper (kept selector name for minimal change in App.tsx) */
+  .inline-quill .rt-toolbar {
     @apply rounded-t-lg py-1 px-1.5;
+  }
+  .inline-quill .rt-container {
+    @apply rounded-b-lg;
   }
 
   /* ===================== Drag / Sections ===================== */
@@ -240,7 +241,7 @@ h3 {
   .drag-handle {
     @apply bg-transparent border-0 py-0.5 px-2 rounded-md active:cursor-grabbing hover:bg-white/5;
   }
-  .ql-editor * {
+  .tiptap * {
     -webkit-user-drag: none;
   }
   .paragraph-section {
@@ -287,29 +288,6 @@ h3 {
 }
 
 /* ========== Non-@apply bits Tailwind can't express cleanly ========== */
-/* Quill SVG strokes/fills & hover states */
-.ql-snow .ql-stroke {
-  stroke: #e2e8f0;
-}
-.ql-snow .ql-fill,
-.ql-snow .ql-picker .ql-picker-label::before,
-.ql-snow .ql-picker .ql-picker-item::before {
-  fill: #e2e8f0;
-}
-
-.ql-snow .ql-toolbar button:hover .ql-stroke,
-.ql-snow .ql-toolbar button:focus .ql-stroke,
-.ql-snow .ql-toolbar .ql-picker-label:hover,
-.ql-snow .ql-toolbar .ql-picker-item:hover {
-  stroke: #fff;
-  color: #fff;
-}
-.ql-snow .ql-toolbar button.ql-active .ql-stroke {
-  stroke: #60a5fa;
-}
-.ql-snow .ql-toolbar button:hover:not(.ql-active) .ql-stroke {
-  stroke: #cbd5e1;
-}
 
 /* ===================== Scrollbars ===================== */
 .editor-wrap * {

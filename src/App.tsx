@@ -1,9 +1,15 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import PropTypes from "prop-types";
-import ReactQuill from "react-quill-new";
+// Tiptap
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import Link from "@tiptap/extension-link";
+import TextStyle from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import Highlight from "@tiptap/extension-highlight";
 import { ColorPicker, useColor, ColorService } from "react-color-palette";
 import "react-color-palette/css";
-import "react-quill-new/dist/quill.snow.css";
 import "./editor.css";
 import brandsData from "./brands.json";
 // @ts-expect-error Vite raw import; typed via src/global.d.ts
@@ -20,20 +26,6 @@ import {
 import type { Brand, BrandColors, MergeGroup, Section } from "./types";
 // Lightly-typed wrappers for third-party components
 const AnyColorPicker = ColorPicker as unknown as React.ComponentType<Record<string, unknown>>;
-const AnyReactQuill = ReactQuill as unknown as React.ComponentType<Record<string, unknown>>;
-
-// Minimal Quill types used via react-quill-new ref
-type QuillInstance = {
-  root: HTMLElement;
-  getSelection: (focus?: boolean) => { index: number } | null;
-  setSelection: (index: number, length: number, source?: unknown) => void;
-  insertText: (index: number, text: string, source?: unknown) => void;
-  deleteText: (index: number, length: number, source?: unknown) => void;
-  getBounds: (index: number) => { top: number; left: number; height: number };
-  on: (ev: string, cb: (range: unknown) => void) => void;
-  off?: (ev: string, cb: (range: unknown) => void) => void;
-};
-type QuillComponent = { getEditor?: () => QuillInstance };
 
 /* ===================== DEFAULTS ===================== */
 const DEFAULT_CTA_COLOR = "#15ad36";
@@ -421,38 +413,8 @@ export default function App() {
     });
   }, [brands, brandDefaults.ctaColor]);
 
-  // --- Quill color palette + modules (hooks must be inside component)
-  const quillPalette = useMemo(() => {
-    const base = [
-      brandColors.text,
-      brandColors.primary,
-      brandColors.accent,
-      "#111827", // near-black
-      "#334155", // slate-700
-      "#0ea5e9", // accent blue
-      "#10b981", // green
-      "#f59e0b", // amber
-      "#ef4444", // red
-      "#6b7280", // gray
-      "#000000", // black
-    ];
-    return Array.from(new Set(base.map((c) => c.toLowerCase())));
-  }, [brandColors]);
-
-  const quillModules = useMemo(
-    () => ({
-      toolbar: [
-        ["bold", "italic", "underline"],
-        [{ list: "ordered" }, { list: "bullet" }],
-        [{ color: quillPalette }, { background: [] }],
-        ["link"],
-        ["clean"],
-      ],
-    }),
-    [quillPalette],
-  );
+  // Rich text editor presets (used only to signal mini vs full toolbar)
   const quillFormats = ["bold", "italic", "underline", "list", "color", "background", "link"];
-  const quillMiniModules = useMemo(() => ({ toolbar: [["bold", "italic"], ["clean"]] }), []);
   const quillMiniFormats = ["bold", "italic"];
 
   // Rebuild HEADER/FOOTER when brand changes
@@ -1055,7 +1017,6 @@ export default function App() {
                     const safe = sanitizeInlineHtml(val || "");
                     setHtml((prev) => replaceBlock(prev, "GREETING", `\n${safe}\n`));
                   }}
-                  modules={quillMiniModules}
                   formats={quillMiniFormats}
                 />
               </div>
@@ -1069,7 +1030,6 @@ export default function App() {
                     const safe = sanitizeInlineHtml(val || "");
                     setHtml((prev) => replaceBlock(prev, "SIGNOFF", `\n${safe}\n`));
                   }}
-                  modules={quillMiniModules}
                   formats={quillMiniFormats}
                 />
               </div>
@@ -1609,7 +1569,6 @@ export default function App() {
                           <ParagraphEditor
                             value={s.content || ""}
                             onChange={(val) => updateSection(s.id, { content: val })}
-                            modules={quillModules}
                             formats={quillFormats}
                           />
                           {s.content && (
@@ -1630,7 +1589,6 @@ export default function App() {
                         <ParagraphEditor
                           value={s.content || ""}
                           onChange={(val) => updateSection(s.id, { content: val })}
-                          modules={quillModules}
                           formats={quillFormats}
                         />
                         {s.content && (
@@ -1926,51 +1884,84 @@ function cryptoRandom() {
   return `id_${Math.random().toString(16).slice(2)}`;
 }
 
-type QuillModules = unknown;
-type QuillFormats = unknown;
+type QuillFormats = string[] | unknown;
 function ParagraphEditor({
   value,
   onChange,
-  modules,
   formats,
 }: {
   value: string;
   onChange: (v: string) => void;
-  modules: QuillModules;
   formats: QuillFormats;
 }) {
-  const quillRef = useRef<QuillComponent | null>(null);
-  const [open, setOpen] = useState<boolean>(false);
-  const [query, setQuery] = useState<string>("");
+  const isMini = Array.isArray(formats) && (formats as string[]).length <= 2; // GREETING / SIGNOFF
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false, // keep simple; paragraphs only
+      }),
+      Underline,
+      TextStyle,
+      Color,
+      Highlight,
+      Link.configure({
+        openOnClick: false,
+        autolink: false,
+        linkOnPaste: false,
+        validate: (href) => /^https?:\/\//.test(href ?? ""),
+      }),
+    ],
+    content: value || "",
+    editorProps: {
+      attributes: {
+        class: `tiptap ${isMini ? "tiptap--mini" : ""}`,
+      },
+    },
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+  });
+
+  // Keep content in sync when value prop changes externally
+  useEffect(() => {
+    if (!editor) return;
+    const html = editor.getHTML();
+    if (value !== html) editor.commands.setContent(value || "", false);
+  }, [value, editor]);
+
+  // Merge-tag menu state
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [anchor, setAnchor] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [triggerIndex, setTriggerIndex] = useState<number | null>(null);
-  const [active, setActive] = useState<number>(0); // flat index across groups
+  const [active, setActive] = useState(0);
+  const [triggerPos, setTriggerPos] = useState<number | null>(null);
 
   const filteredGroups = useMemo(() => filterGroups(query), [query]);
   const flat = useMemo(
     () => filteredGroups.flatMap((g) => g.items.map((it) => ({ ...it, group: g.group }))),
     [filteredGroups],
   );
+  useEffect(() => setActive(0), [query]);
 
+  // Key handling for '#'
   useEffect(() => {
-    setActive(0);
-  }, [query]);
-
-  useEffect(() => {
-    const quill = quillRef.current?.getEditor?.();
-    if (!quill) return;
-    const root = quill.root;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
+    if (!editor) return;
+    const dom = editor.view.dom as HTMLElement;
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "#") {
         e.preventDefault();
-        const r = quill.getSelection(true);
-        if (!r) return;
-        quill.insertText(r.index, "#", "user");
-        quill.setSelection(r.index + 1, 0, "user");
-        const b = quill.getBounds(r.index + 1);
-        setAnchor({ top: b.top + b.height + 6, left: b.left });
-        setTriggerIndex(r.index);
+        const { from } = editor.state.selection;
+        editor
+          .chain()
+          .focus()
+          .insertContent("#")
+          .setTextSelection(from + 1)
+          .run();
+        const coords = editor.view.coordsAtPos(from + 1);
+        const container = dom.getBoundingClientRect();
+        setAnchor({ top: coords.top - container.top + 22, left: coords.left - container.left });
+        setTriggerPos(from);
         setQuery("");
         setActive(0);
         setOpen(true);
@@ -1981,7 +1972,14 @@ function ParagraphEditor({
 
       if (e.key === "Escape") {
         e.preventDefault();
-        if (triggerIndex != null) quill.deleteText(triggerIndex, 1, "user");
+        if (triggerPos != null) {
+          editor
+            .chain()
+            .focus()
+            .setTextSelection(triggerPos)
+            .deleteRange({ from: triggerPos, to: triggerPos + 1 })
+            .run();
+        }
         setOpen(false);
         return;
       }
@@ -1989,10 +1987,13 @@ function ParagraphEditor({
         e.preventDefault();
         if (!flat.length) return;
         const pick = flat[Math.max(0, Math.min(active, flat.length - 1))];
-        if (triggerIndex != null) {
-          quill.deleteText(triggerIndex, 1, "user");
-          quill.insertText(triggerIndex, pick.value, "user");
-          quill.setSelection(triggerIndex + pick.value.length, 0, "user");
+        if (triggerPos != null) {
+          editor
+            .chain()
+            .focus()
+            .setTextSelection({ from: triggerPos, to: triggerPos + 1 })
+            .insertContent(pick.value)
+            .run();
         }
         setOpen(false);
         return;
@@ -2011,7 +2012,14 @@ function ParagraphEditor({
         e.preventDefault();
         if (query.length) setQuery((q) => q.slice(0, -1));
         else {
-          if (triggerIndex != null) quill.deleteText(triggerIndex, 1, "user");
+          if (triggerPos != null) {
+            editor
+              .chain()
+              .focus()
+              .setTextSelection(triggerPos)
+              .deleteRange({ from: triggerPos, to: triggerPos + 1 })
+              .run();
+          }
           setOpen(false);
         }
         return;
@@ -2019,47 +2027,119 @@ function ParagraphEditor({
       if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         setQuery((q) => q + e.key);
-        const r = quill.getSelection(true);
-        const b = quill.getBounds(r?.index ?? 0);
-        setAnchor({ top: b.top + b.height + 6, left: b.left });
+        const { from } = editor.state.selection;
+        const coords = editor.view.coordsAtPos(from);
+        const container = dom.getBoundingClientRect();
+        setAnchor({ top: coords.top - container.top + 22, left: coords.left - container.left });
         return;
       }
     };
-
-    root.addEventListener("keydown", handleKeyDown);
-    return () => root.removeEventListener("keydown", handleKeyDown);
-  }, [open, query, active, flat, triggerIndex]);
-
-  useEffect(() => {
-    const quill = quillRef.current?.getEditor?.();
-    if (!quill) return;
-    const onSel = (range: unknown) => {
-      if (!range) setOpen(false);
-    };
-    quill.on("selection-change", onSel);
-    return () => quill.off?.("selection-change", onSel);
-  }, []);
+    dom.addEventListener("keydown", onKey);
+    return () => dom.removeEventListener("keydown", onKey);
+  }, [editor, open, query, active, flat, triggerPos]);
 
   const choose = (item: { value: string }) => {
-    const quill = quillRef.current?.getEditor?.();
-    if (!quill || triggerIndex == null) return;
-    quill.deleteText(triggerIndex, 1, "user");
-    quill.insertText(triggerIndex, item.value, "user");
-    quill.setSelection(triggerIndex + item.value.length, 0, "user");
+    if (!editor || triggerPos == null) return;
+    editor
+      .chain()
+      .focus()
+      .setTextSelection({ from: triggerPos, to: triggerPos + 1 })
+      .insertContent(item.value)
+      .run();
     setOpen(false);
   };
 
+  const promptLink = () => {
+    if (!editor) return;
+    const prev = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("Enter URL (https://…)", prev || "https://");
+    if (url === null) return; // cancelled
+    if (!url) {
+      editor.chain().focus().unsetLink().run();
+      return;
+    }
+    if (!/^https?:\/\//.test(url)) return alert("URL must start with http(s)://");
+    editor.chain().focus().setLink({ href: url }).run();
+  };
+
+  if (!editor) return null;
+
   return (
     <div style={{ position: "relative" }}>
-      {/* react-quill-new types are noisy; cast component to any to allow props */}
-      <AnyReactQuill
-        ref={quillRef}
-        theme="snow"
-        value={value}
-        onChange={onChange}
-        modules={modules}
-        formats={formats}
-      />
+      {/* Toolbar */}
+      <div className={`rt-toolbar ${isMini ? "rt-toolbar--mini" : ""}`}>
+        <button
+          className={`rt-btn ${editor.isActive("bold") ? "is-active" : ""}`}
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          title="Bold"
+          type="button"
+        >
+          B
+        </button>
+        <button
+          className={`rt-btn ${editor.isActive("italic") ? "is-active" : ""}`}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          title="Italic"
+          type="button"
+        >
+          I
+        </button>
+        {!isMini && (
+          <>
+            <button
+              className={`rt-btn ${editor.isActive("underline") ? "is-active" : ""}`}
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+              title="Underline"
+              type="button"
+            >
+              U
+            </button>
+            <span className="rt-sep" />
+            <button
+              className="rt-btn"
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              title="Bullet list"
+              type="button"
+            >
+              • List
+            </button>
+            <button
+              className="rt-btn"
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              title="Ordered list"
+              type="button"
+            >
+              1. List
+            </button>
+            <span className="rt-sep" />
+            <input
+              type="color"
+              className="rt-color"
+              title="Text color"
+              onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+            />
+            <button className="rt-btn" onClick={promptLink} title="Link" type="button">
+              Link
+            </button>
+          </>
+        )}
+        <span className="rt-sep" />
+        <button
+          className="rt-btn"
+          onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+          title="Clear formatting"
+          type="button"
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* Editor */}
+      <div className="rt-container">
+        <EditorContent editor={editor} />
+      </div>
+
+      {/* Merge tag menu */}
       {open && (
         <div
           className="tag-menu"
@@ -2068,7 +2148,7 @@ function ParagraphEditor({
         >
           {flat.length ? (
             (() => {
-              let ptr = 0; // running flat index for highlight / click
+              let ptr = 0;
               return filteredGroups.map((g) => (
                 <div className="group" key={g.group}>
                   <div className="group-title">{g.group}</div>
