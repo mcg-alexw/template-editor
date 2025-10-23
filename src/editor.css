@@ -213,6 +213,24 @@ h3 {
   .rt-color {
     @apply w-8 h-6 p-0 border border-slate-500 rounded-md bg-transparent cursor-pointer;
   }
+  .rt-color-dropdown {
+    @apply relative;
+  }
+  .rt-color-btn {
+    @apply p-1;
+  }
+  .rt-color-swatch {
+    @apply w-6 h-4 rounded border border-slate-400;
+  }
+  .rt-color-palette {
+    @apply absolute top-full left-0 mt-1 bg-white border border-slate-300 rounded-md shadow-lg z-10 p-1;
+  }
+  .rt-color-row {
+    @apply flex gap-1 mb-1 last:mb-0;
+  }
+  .rt-color-option {
+    @apply w-6 h-6 rounded border border-slate-300 cursor-pointer hover:border-slate-500;
+  }
   .rt-container {
     @apply bg-white text-[#111827] border border-slate-700 rounded-b-xl overflow-hidden;
   }

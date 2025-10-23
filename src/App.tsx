@@ -1129,6 +1129,7 @@ export default function App() {
                     setHtml((prev) => replaceBlock(prev, "GREETING", `\n${safe}\n`));
                   }}
                   formats={quillMiniFormats}
+                  brandColors={brandColors}
                 />
               </div>
             </div>
@@ -1142,6 +1143,7 @@ export default function App() {
                     setHtml((prev) => replaceBlock(prev, "SIGNOFF", `\n${safe}\n`));
                   }}
                   formats={quillMiniFormats}
+                  brandColors={brandColors}
                 />
               </div>
             </div>
@@ -1681,6 +1683,7 @@ export default function App() {
                             value={s.content || ""}
                             onChange={(val) => updateSection(s.id, { content: val })}
                             formats={quillFormats}
+                            brandColors={brandColors}
                           />
                           {s.content && (
                             <div className="row-right">
@@ -1701,6 +1704,7 @@ export default function App() {
                           value={s.content || ""}
                           onChange={(val) => updateSection(s.id, { content: val })}
                           formats={quillFormats}
+                          brandColors={brandColors}
                         />
                         {s.content && (
                           <div className="row-right">
@@ -2000,10 +2004,12 @@ function ParagraphEditor({
   value,
   onChange,
   formats,
+  brandColors,
 }: {
   value: string;
   onChange: (v: string) => void;
   formats: QuillFormats;
+  brandColors: BrandColors;
 }) {
   const isMini = Array.isArray(formats) && (formats as string[]).length <= 2; // GREETING / SIGNOFF
 
@@ -2041,12 +2047,36 @@ function ParagraphEditor({
     if (value !== html) editor.commands.setContent(value || "", { emitUpdate: false });
   }, [value, editor]);
 
+  // Color palette
+  const quillPalette = useMemo(
+    () => [
+      [
+        brandColors.primary,
+        brandColors.accent,
+        "#000000",
+        "#e60000",
+        "#ff9900",
+        "#ffff00",
+        "#008a00",
+      ],
+      [brandColors.text, brandColors.bg, "#ffffff", "#facccc", "#ffebcc", "#ffffcc", "#cce8cc"],
+      ["#bbbbbb", "#f06666", "#ffc266", "#ffff66", "#66b966", "#66a3e0", "#c285ff"],
+      ["#888888", "#a10000", "#b26b00", "#b2b200", "#006100", "#0047b2", "#6b24b2"],
+      ["#444444", "#5c0000", "#663d00", "#666600", "#003700", "#002966", "#3d1466"],
+    ],
+    [brandColors],
+  );
+
   // Merge-tag menu state
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [anchor, setAnchor] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [active, setActive] = useState(0);
   const [triggerPos, setTriggerPos] = useState<number | null>(null);
+
+  // Color dropdown state
+  const [textColorOpen, setTextColorOpen] = useState(false);
+  const [bgColorOpen, setBgColorOpen] = useState(false);
 
   const filteredGroups = useMemo(() => filterGroups(query), [query]);
   const flat = useMemo(
@@ -2149,6 +2179,21 @@ function ParagraphEditor({
     return () => dom.removeEventListener("keydown", onKey);
   }, [editor, open, query, active, flat, triggerPos]);
 
+  // Close color dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (textColorOpen || bgColorOpen) {
+        const target = event.target as Element;
+        if (!target.closest(".rt-color-dropdown")) {
+          setTextColorOpen(false);
+          setBgColorOpen(false);
+        }
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [textColorOpen, bgColorOpen]);
+
   const choose = (item: { value: string }) => {
     if (!editor || triggerPos == null) return;
     editor
@@ -2228,18 +2273,78 @@ function ParagraphEditor({
               <IconOrderedList />
             </button>
             <span className="rt-sep" />
-            <input
-              type="color"
-              className="rt-color"
-              title="Text color"
-              onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
-            />
-            <input
-              type="color"
-              className="rt-color"
-              title="Background color"
-              onChange={(e) => editor.chain().focus().setHighlight({ color: e.target.value }).run()}
-            />
+            <div className="rt-color-dropdown">
+              <button
+                className="rt-btn rt-color-btn"
+                onClick={() => setTextColorOpen(!textColorOpen)}
+                title="Text color"
+                type="button"
+                aria-label="Text color"
+              >
+                <div
+                  className="rt-color-swatch"
+                  style={{ backgroundColor: editor.getAttributes("textStyle").color || "#000000" }}
+                />
+              </button>
+              {textColorOpen && (
+                <div className="rt-color-palette">
+                  {quillPalette.map((row, rowIndex) => (
+                    <div key={rowIndex} className="rt-color-row">
+                      {row.map((color) => (
+                        <button
+                          key={color}
+                          className="rt-color-option"
+                          style={{ backgroundColor: color }}
+                          onClick={() => {
+                            editor.chain().focus().setColor(color).run();
+                            setTextColorOpen(false);
+                          }}
+                          title={color}
+                          type="button"
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="rt-color-dropdown">
+              <button
+                className="rt-btn rt-color-btn"
+                onClick={() => setBgColorOpen(!bgColorOpen)}
+                title="Background color"
+                type="button"
+                aria-label="Background color"
+              >
+                <div
+                  className="rt-color-swatch"
+                  style={{
+                    backgroundColor: editor.getAttributes("highlight").color || "transparent",
+                  }}
+                />
+              </button>
+              {bgColorOpen && (
+                <div className="rt-color-palette">
+                  {quillPalette.map((row, rowIndex) => (
+                    <div key={rowIndex} className="rt-color-row">
+                      {row.map((color) => (
+                        <button
+                          key={color}
+                          className="rt-color-option"
+                          style={{ backgroundColor: color }}
+                          onClick={() => {
+                            editor.chain().focus().setHighlight({ color }).run();
+                            setBgColorOpen(false);
+                          }}
+                          title={color}
+                          type="button"
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               className="rt-btn"
               onClick={promptLink}
