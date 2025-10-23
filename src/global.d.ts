@@ -6,8 +6,6 @@ declare module "*.css";
 declare module "react-color-palette";
 declare module "@tiptap/react";
 declare module "@tiptap/starter-kit";
-declare module "@tiptap/extension-underline";
-declare module "@tiptap/extension-link";
 declare module "@tiptap/extension-text-style";
 declare module "@tiptap/extension-color";
 declare module "@tiptap/extension-highlight";

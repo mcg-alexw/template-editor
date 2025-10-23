@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import PropTypes from "prop-types";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, useEditor, Editor } from "@tiptap/react";
 import * as TiptapReactAny from "@tiptap/react";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const BubbleMenu = (TiptapReactAny as any).BubbleMenu as
+// Narrow the BubbleMenu typing to avoid `any` and satisfy ESLint
+const BubbleMenu = (TiptapReactAny as unknown as { BubbleMenu?: React.ComponentType<unknown> })
+  .BubbleMenu as
   | React.ComponentType<{
-      editor: any;
-      tippyOptions?: any;
+      editor: Editor | null;
+      tippyOptions?: Record<string, unknown>;
       className?: string;
       children: React.ReactNode;
     }>
@@ -124,8 +125,6 @@ import { StarterKit } from "@tiptap/starter-kit";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
 import { Highlight } from "@tiptap/extension-highlight";
-import { Underline } from "@tiptap/extension-underline";
-import { Link } from "@tiptap/extension-link";
 import { ColorPicker, useColor, ColorService } from "react-color-palette";
 import "react-color-palette/css";
 import "./editor.css";
@@ -2024,17 +2023,16 @@ function ParagraphEditor({
     extensions: [
       StarterKit.configure({
         heading: false, // keep simple; paragraphs only
+        link: {
+          openOnClick: false,
+          autolink: false,
+          linkOnPaste: false,
+          validate: (href) => /^https?:\/\//.test(href ?? ""),
+        },
       }),
-      Underline,
       TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
-      Link.configure({
-        openOnClick: false,
-        autolink: false,
-        linkOnPaste: false,
-        validate: (href) => /^https?:\/\//.test(href ?? ""),
-      }),
     ],
     content: value || "",
     editorProps: {
