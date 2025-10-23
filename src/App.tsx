@@ -1,9 +1,16 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import PropTypes from "prop-types";
-// Tiptap
 import { EditorContent, useEditor } from "@tiptap/react";
 import * as TiptapReactAny from "@tiptap/react";
-const BubbleMenuAny = (TiptapReactAny as any).BubbleMenu as React.ComponentType<any> | undefined;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const BubbleMenu = (TiptapReactAny as any).BubbleMenu as
+  | React.ComponentType<{
+      editor: any;
+      tippyOptions?: any;
+      className?: string;
+      children: React.ReactNode;
+    }>
+  | undefined;
 
 // Quill Snow icons (exact SVGs with ql-* classes)
 function IconBold(props: React.SVGProps<SVGSVGElement>) {
@@ -2078,6 +2085,11 @@ function ParagraphEditor({
   const [textColorOpen, setTextColorOpen] = useState(false);
   const [bgColorOpen, setBgColorOpen] = useState(false);
 
+  // Link modal state
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkText, setLinkText] = useState("");
+
   const filteredGroups = useMemo(() => filterGroups(query), [query]);
   const flat = useMemo(
     () => filteredGroups.flatMap((g) => g.items.map((it) => ({ ...it, group: g.group }))),
@@ -2208,14 +2220,59 @@ function ParagraphEditor({
   const promptLink = () => {
     if (!editor) return;
     const prev = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("Enter URL (https://…)", prev || "https://");
-    if (url === null) return; // cancelled
-    if (!url) {
+    const selectedText = editor.state.doc.textBetween(
+      editor.state.selection.from,
+      editor.state.selection.to,
+    );
+
+    setLinkUrl(prev || "https://");
+    setLinkText(selectedText || "");
+    setShowLinkModal(true);
+  };
+
+  const saveLink = () => {
+    if (!editor) return;
+
+    if (!linkUrl.trim()) {
       editor.chain().focus().unsetLink().run();
-      return;
+    } else {
+      if (!/^https?:\/\//.test(linkUrl.trim())) {
+        alert("URL must start with http:// or https://");
+        return;
+      }
+
+      const selectedText = editor.state.doc.textBetween(
+        editor.state.selection.from,
+        editor.state.selection.to,
+      );
+      const finalLinkText = linkText.trim() || selectedText || linkUrl.trim();
+
+      // If we have custom link text or no selected text, insert/replace content
+      if (linkText.trim() || !selectedText) {
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: "text",
+            text: finalLinkText,
+            marks: [{ type: "link", attrs: { href: linkUrl.trim() } }],
+          })
+          .run();
+      } else {
+        // If we have selected text and no custom link text, just set the link mark
+        editor.chain().focus().setLink({ href: linkUrl.trim() }).run();
+      }
     }
-    if (!/^https?:\/\//.test(url)) return alert("URL must start with http(s)://");
-    editor.chain().focus().setLink({ href: url }).run();
+
+    setShowLinkModal(false);
+    setLinkUrl("");
+    setLinkText("");
+  };
+
+  const cancelLink = () => {
+    setShowLinkModal(false);
+    setLinkUrl("");
+    setLinkText("");
   };
 
   if (!editor) return null;
@@ -2368,14 +2425,63 @@ function ParagraphEditor({
         </button>
       </div>
 
+      {/* Link Modal */}
+      {showLinkModal && (
+        <div className="modal-backdrop" onClick={() => setShowLinkModal(false)}>
+          <div className="modal link-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <strong>Add Link</strong>
+              <button className="btn remove" onClick={cancelLink}>
+                ✕ Close
+              </button>
+            </div>
+            <div className="modal-body">
+              <div style={{ marginBottom: 16 }}>
+                <label className="label" style={{ display: "block", marginBottom: 8 }}>
+                  Link Text (optional)
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="Text to display (leave empty to use URL)"
+                />
+              </div>
+              <div>
+                <label className="label" style={{ display: "block", marginBottom: 8 }}>
+                  URL
+                </label>
+                <input
+                  type="url"
+                  className="input"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="actions">
+              <button className="btn" onClick={cancelLink}>
+                Cancel
+              </button>
+              <button className="btn primary" onClick={saveLink}>
+                Add Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Editor */}
       <div className="rt-container">
         <EditorContent editor={editor} />
       </div>
 
       {/* Bubble menu (inline formatting, like TipTap template) */}
-      {BubbleMenuAny && (
-        <BubbleMenuAny editor={editor} tippyOptions={{ duration: 100 }} className="bubble-menu">
+      {BubbleMenu && (
+        <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} className="bubble-menu">
           <button
             className={editor.isActive("bold") ? "is-active" : ""}
             onClick={() => editor.chain().focus().toggleBold().run()}
@@ -2426,7 +2532,7 @@ function ParagraphEditor({
           >
             <IconClear width={14} height={14} />
           </button>
-        </BubbleMenuAny>
+        </BubbleMenu>
       )}
 
       {/* Merge tag menu */}
@@ -2658,6 +2764,8 @@ function MergeInput({
           )}
         </div>
       )}
+
+      {/* Editor */}
     </div>
   );
 }

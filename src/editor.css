@@ -181,6 +181,9 @@ h3 {
   .modal {
     @apply w-[min(920px,92vw)] max-h-[86vh] bg-[#0e162c] text-[#e6ebf5] border border-[#27314f] rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden;
   }
+  .modal.link-modal {
+    @apply w-[min(500px,90vw)];
+  }
   .modal .modal-head {
     @apply flex justify-between items-center py-3 px-[14px] border-b border-[#27314f] bg-[linear-gradient(135deg,#101729,#0d1424)];
   }
@@ -190,8 +193,11 @@ h3 {
   .modal textarea {
     @apply bg-white text-[#111827] w-full h-[60vh] border border-[#27314f] rounded-[10px] p-3 font-mono;
   }
+  .modal .modal-body .input {
+    @apply w-full;
+  }
   .modal .actions {
-    @apply flex gap-2 justify-end py-3 px-[14px] border-t border-[#27314f];
+    @apply flex gap-2 justify-end py-4 px-[14px] border-t border-[#27314f];
   }
 
   /* ===================== Rich text editor (Tiptap) ===================== */
