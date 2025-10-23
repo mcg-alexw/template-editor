@@ -2,12 +2,123 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import PropTypes from "prop-types";
 // Tiptap
 import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Link from "@tiptap/extension-link";
-import TextStyle from "@tiptap/extension-text-style";
-import Color from "@tiptap/extension-color";
-import Highlight from "@tiptap/extension-highlight";
+import * as TiptapReactAny from "@tiptap/react";
+const BubbleMenuAny = (TiptapReactAny as any).BubbleMenu as React.ComponentType<any> | undefined;
+
+// Quill Snow icons (exact SVGs with ql-* classes)
+function IconBold(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <path
+        className="ql-stroke"
+        d="M5,4H9.5A2.5,2.5,0,0,1,12,6.5v0A2.5,2.5,0,0,1,9.5,9H5A0,0,0,0,1,5,9V4A0,0,0,0,1,5,4Z"
+      ></path>
+      <path
+        className="ql-stroke"
+        d="M5,9h5.5A2.5,2.5,0,0,1,13,11.5v0A2.5,2.5,0,0,1,10.5,14H5a0,0,0,0,1,0,0V9A0,0,0,0,1,5,9Z"
+      ></path>
+    </svg>
+  );
+}
+function IconItalic(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="7" x2="13" y1="4" y2="4"></line>
+      <line className="ql-stroke" x1="5" x2="11" y1="14" y2="14"></line>
+      <line className="ql-stroke" x1="8" x2="10" y1="14" y2="4"></line>
+    </svg>
+  );
+}
+function IconUnderline(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <path className="ql-stroke" d="M5,3V9a4.012,4.012,0,0,0,4,4H9a4.012,4.012,0,0,0,4-4V3"></path>
+      <rect className="ql-fill" height="1" rx="0.5" ry="0.5" width="12" x="3" y="15"></rect>
+    </svg>
+  );
+}
+function IconBulletList(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="6" x2="15" y1="4" y2="4"></line>
+      <line className="ql-stroke" x1="6" x2="15" y1="9" y2="9"></line>
+      <line className="ql-stroke" x1="6" x2="15" y1="14" y2="14"></line>
+      <line className="ql-stroke" x1="3" x2="3" y1="4" y2="4"></line>
+      <line className="ql-stroke" x1="3" x2="3" y1="9" y2="9"></line>
+      <line className="ql-stroke" x1="3" x2="3" y1="14" y2="14"></line>
+    </svg>
+  );
+}
+function IconOrderedList(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="7" x2="15" y1="4" y2="4"></line>
+      <line className="ql-stroke" x1="7" x2="15" y1="9" y2="9"></line>
+      <line className="ql-stroke" x1="7" x2="15" y1="14" y2="14"></line>
+      <line className="ql-stroke ql-thin" x1="2.5" x2="4.5" y1="5.5" y2="5.5"></line>
+      <path
+        className="ql-fill"
+        d="M3.5,6A0.5,0.5,0,0,1,3,5.5V3.085l-0.276.138A0.5,0.5,0,0,1,2.053,3c-0.124-.247-0.023-0.324.224-0.447l1-.5A0.5,0.5,0,0,1,4,2.5v3A0.5,0.5,0,0,1,3.5,6Z"
+      ></path>
+      <path
+        className="ql-stroke ql-thin"
+        d="M4.5,10.5h-2c0-.234,1.85-1.076,1.85-2.234A0.959,0.959,0,0,0,2.5,8.156"
+      ></path>
+      <path
+        className="ql-stroke ql-thin"
+        d="M2.5,14.846a0.959,0.959,0,0,0,1.85-.109A0.7,0.7,0,0,0,3.75,14a0.688,0.688,0,0,0,.6-0.736,0.959,0.959,0,0,0-1.85-.109"
+      ></path>
+    </svg>
+  );
+}
+function IconLink(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="7" x2="11" y1="7" y2="11"></line>
+      <path
+        className="ql-even ql-stroke"
+        d="M8.9,4.577a3.476,3.476,0,0,1,.36,4.679A3.476,3.476,0,0,1,4.577,8.9C3.185,7.5,2.035,6.4,4.217,4.217S7.5,3.185,8.9,4.577Z"
+      ></path>
+      <path
+        className="ql-even ql-stroke"
+        d="M13.423,9.1a3.476,3.476,0,0,0-4.679-.36,3.476,3.476,0,0,0,.36,4.679c1.392,1.392,2.5,2.542,4.679.36S14.815,10.5,13.423,9.1Z"
+      ></path>
+    </svg>
+  );
+}
+function IconUnlink(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="7" x2="11" y1="7" y2="11" />
+      <path
+        className="ql-even ql-stroke"
+        d="M8.9,4.577a3.476,3.476,0,0,1,.36,4.679A3.476,3.476,0,0,1,4.577,8.9C3.185,7.5,2.035,6.4,4.217,4.217S7.5,3.185,8.9,4.577Z"
+      />
+      <path
+        className="ql-even ql-stroke"
+        d="M13.423,9.1a3.476,3.476,0,0,0-4.679-.36,3.476,3.476,0,0,0,.36,4.679c1.392,1.392,2.5,2.542,4.679.36S14.815,10.5,13.423,9.1Z"
+      />
+      <line className="ql-stroke" x1="4" x2="14" y1="14" y2="4" />
+    </svg>
+  );
+}
+function IconClear(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="5" x2="13" y1="3" y2="3"></line>
+      <line className="ql-stroke" x1="6" x2="9.35" y1="12" y2="3"></line>
+      <line className="ql-stroke" x1="11" x2="15" y1="11" y2="15"></line>
+      <line className="ql-stroke" x1="15" x2="11" y1="11" y2="15"></line>
+      <rect className="ql-fill" height="1" rx="0.5" ry="0.5" width="7" x="2" y="14"></rect>
+    </svg>
+  );
+}
+import { StarterKit } from "@tiptap/starter-kit";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import { Highlight } from "@tiptap/extension-highlight";
+import { Underline } from "@tiptap/extension-underline";
+import { Link } from "@tiptap/extension-link";
 import { ColorPicker, useColor, ColorService } from "react-color-palette";
 import "react-color-palette/css";
 import "./editor.css";
@@ -1904,7 +2015,7 @@ function ParagraphEditor({
       Underline,
       TextStyle,
       Color,
-      Highlight,
+      Highlight.configure({ multicolor: true }),
       Link.configure({
         openOnClick: false,
         autolink: false,
@@ -1927,7 +2038,7 @@ function ParagraphEditor({
   useEffect(() => {
     if (!editor) return;
     const html = editor.getHTML();
-    if (value !== html) editor.commands.setContent(value || "", false);
+    if (value !== html) editor.commands.setContent(value || "", { emitUpdate: false });
   }, [value, editor]);
 
   // Merge-tag menu state
@@ -2073,16 +2184,18 @@ function ParagraphEditor({
           onClick={() => editor.chain().focus().toggleBold().run()}
           title="Bold"
           type="button"
+          aria-label="Bold"
         >
-          B
+          <IconBold />
         </button>
         <button
           className={`rt-btn ${editor.isActive("italic") ? "is-active" : ""}`}
           onClick={() => editor.chain().focus().toggleItalic().run()}
           title="Italic"
           type="button"
+          aria-label="Italic"
         >
-          I
+          <IconItalic />
         </button>
         {!isMini && (
           <>
@@ -2091,25 +2204,28 @@ function ParagraphEditor({
               onClick={() => editor.chain().focus().toggleUnderline().run()}
               title="Underline"
               type="button"
+              aria-label="Underline"
             >
-              U
+              <IconUnderline />
             </button>
             <span className="rt-sep" />
             <button
-              className="rt-btn"
+              className={`rt-btn ${editor.isActive("bulletList") ? "is-active" : ""}`}
               onClick={() => editor.chain().focus().toggleBulletList().run()}
               title="Bullet list"
               type="button"
+              aria-label="Bullet list"
             >
-              • List
+              <IconBulletList />
             </button>
             <button
-              className="rt-btn"
+              className={`rt-btn ${editor.isActive("orderedList") ? "is-active" : ""}`}
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
               title="Ordered list"
               type="button"
+              aria-label="Ordered list"
             >
-              1. List
+              <IconOrderedList />
             </button>
             <span className="rt-sep" />
             <input
@@ -2118,8 +2234,20 @@ function ParagraphEditor({
               title="Text color"
               onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
             />
-            <button className="rt-btn" onClick={promptLink} title="Link" type="button">
-              Link
+            <input
+              type="color"
+              className="rt-color"
+              title="Background color"
+              onChange={(e) => editor.chain().focus().setHighlight({ color: e.target.value }).run()}
+            />
+            <button
+              className="rt-btn"
+              onClick={promptLink}
+              title="Link"
+              type="button"
+              aria-label="Link"
+            >
+              <IconLink />
             </button>
           </>
         )}
@@ -2129,8 +2257,9 @@ function ParagraphEditor({
           onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
           title="Clear formatting"
           type="button"
+          aria-label="Clear formatting"
         >
-          Clear
+          <IconClear />
         </button>
       </div>
 
@@ -2138,6 +2267,62 @@ function ParagraphEditor({
       <div className="rt-container">
         <EditorContent editor={editor} />
       </div>
+
+      {/* Bubble menu (inline formatting, like TipTap template) */}
+      {BubbleMenuAny && (
+        <BubbleMenuAny editor={editor} tippyOptions={{ duration: 100 }} className="bubble-menu">
+          <button
+            className={editor.isActive("bold") ? "is-active" : ""}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            title="Bold"
+            type="button"
+            aria-label="Bold"
+          >
+            <IconBold width={14} height={14} />
+          </button>
+          <button
+            className={editor.isActive("italic") ? "is-active" : ""}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            title="Italic"
+            type="button"
+            aria-label="Italic"
+          >
+            <IconItalic width={14} height={14} />
+          </button>
+          <button
+            className={editor.isActive("underline") ? "is-active" : ""}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            title="Underline"
+            type="button"
+            aria-label="Underline"
+          >
+            <IconUnderline width={14} height={14} />
+          </button>
+          {editor.isActive("link") ? (
+            <button
+              className="is-active"
+              onClick={() => editor.chain().focus().unsetLink().run()}
+              title="Remove link"
+              type="button"
+              aria-label="Remove link"
+            >
+              <IconUnlink width={14} height={14} />
+            </button>
+          ) : (
+            <button onClick={promptLink} title="Add link" type="button" aria-label="Add link">
+              <IconLink width={14} height={14} />
+            </button>
+          )}
+          <button
+            onClick={() => editor.chain().focus().unsetAllMarks().run()}
+            title="Clear formatting"
+            type="button"
+            aria-label="Clear formatting"
+          >
+            <IconClear width={14} height={14} />
+          </button>
+        </BubbleMenuAny>
+      )}
 
       {/* Merge tag menu */}
       {open && (
