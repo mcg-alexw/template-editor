@@ -1135,7 +1135,6 @@ export default function App() {
                     setHtml((prev) => replaceBlock(prev, "GREETING", `\n${safe}\n`));
                   }}
                   formats={quillMiniFormats}
-                  brandColors={brandColors}
                 />
               </div>
             </div>
@@ -1149,7 +1148,6 @@ export default function App() {
                     setHtml((prev) => replaceBlock(prev, "SIGNOFF", `\n${safe}\n`));
                   }}
                   formats={quillMiniFormats}
-                  brandColors={brandColors}
                 />
               </div>
             </div>
@@ -1689,7 +1687,6 @@ export default function App() {
                             value={s.content || ""}
                             onChange={(val) => updateSection(s.id, { content: val })}
                             formats={quillFormats}
-                            brandColors={brandColors}
                           />
                           {s.content && (
                             <div className="row-right">
@@ -1710,7 +1707,6 @@ export default function App() {
                           value={s.content || ""}
                           onChange={(val) => updateSection(s.id, { content: val })}
                           formats={quillFormats}
-                          brandColors={brandColors}
                         />
                         {s.content && (
                           <div className="row-right">
@@ -2010,12 +2006,10 @@ function ParagraphEditor({
   value,
   onChange,
   formats,
-  brandColors,
 }: {
   value: string;
   onChange: (v: string) => void;
   formats: QuillFormats;
-  brandColors: BrandColors;
 }) {
   const isMini = Array.isArray(formats) && (formats as string[]).length <= 2; // GREETING / SIGNOFF
 
@@ -2055,21 +2049,13 @@ function ParagraphEditor({
   // Color palette
   const quillPalette = useMemo(
     () => [
-      [
-        brandColors.primary,
-        brandColors.accent,
-        "#000000",
-        "#e60000",
-        "#ff9900",
-        "#ffff00",
-        "#008a00",
-      ],
-      [brandColors.text, brandColors.bg, "#ffffff", "#facccc", "#ffebcc", "#ffffcc", "#cce8cc"],
-      ["#bbbbbb", "#f06666", "#ffc266", "#ffff66", "#66b966", "#66a3e0", "#c285ff"],
-      ["#888888", "#a10000", "#b26b00", "#b2b200", "#006100", "#0047b2", "#6b24b2"],
-      ["#444444", "#5c0000", "#663d00", "#666600", "#003700", "#002966", "#3d1466"],
+      ["#000000", "#E60000", "#FF9900", "#FF9900", "#008A00", "#0066CC", "#9933FF"], // default Quill
+      ["#FFFFFF", "#FACCCC", "#FFEBCC", "#FFFFCC", "#CCE8CC", "#CCE0F5", "#EBD6FF"], // light Quill
+      ["#BBBBBB", "#F06666", "#FFC266", "#FFFF66", "#66B966", "#66A3E0", "#C285FF"], // medium Quill
+      ["#888888", "#A10000", "#B26B00", "#B2B200", "#006100", "#0047B2", "#6B24B2"], // dark Quill
+      ["#444444", "#5C0000", "#663D00", "#666600", "#003700", "#002966", "#3D1466"], // darker Quill
     ],
-    [brandColors],
+    [],
   );
 
   // Merge-tag menu state

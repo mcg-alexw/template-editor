@@ -29,8 +29,8 @@ export default defineConfig([
       "@stylistic/indent": ["error", 2],
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
-  // Allow @ts-nocheck temporarily for migration files
-  "@typescript-eslint/ban-ts-comment": ["error", { "ts-nocheck": false }],
+      // Allow @ts-nocheck temporarily for migration files
+      "@typescript-eslint/ban-ts-comment": ["error", { "ts-nocheck": false }],
     },
     settings: {
       react: { version: "detect" },
