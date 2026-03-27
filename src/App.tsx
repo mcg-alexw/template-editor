@@ -1,9 +1,132 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import PropTypes from "prop-types";
-import ReactQuill from "react-quill-new";
+import { EditorContent, useEditor, Editor } from "@tiptap/react";
+import * as TiptapReactAny from "@tiptap/react";
+// Narrow the BubbleMenu typing to avoid `any` and satisfy ESLint
+const BubbleMenu = (TiptapReactAny as unknown as { BubbleMenu?: React.ComponentType<unknown> })
+  .BubbleMenu as
+  | React.ComponentType<{
+      editor: Editor | null;
+      tippyOptions?: Record<string, unknown>;
+      className?: string;
+      children: React.ReactNode;
+    }>
+  | undefined;
+
+// Quill Snow icons (exact SVGs with ql-* classes)
+function IconBold(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <path
+        className="ql-stroke"
+        d="M5,4H9.5A2.5,2.5,0,0,1,12,6.5v0A2.5,2.5,0,0,1,9.5,9H5A0,0,0,0,1,5,9V4A0,0,0,0,1,5,4Z"
+      ></path>
+      <path
+        className="ql-stroke"
+        d="M5,9h5.5A2.5,2.5,0,0,1,13,11.5v0A2.5,2.5,0,0,1,10.5,14H5a0,0,0,0,1,0,0V9A0,0,0,0,1,5,9Z"
+      ></path>
+    </svg>
+  );
+}
+function IconItalic(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="7" x2="13" y1="4" y2="4"></line>
+      <line className="ql-stroke" x1="5" x2="11" y1="14" y2="14"></line>
+      <line className="ql-stroke" x1="8" x2="10" y1="14" y2="4"></line>
+    </svg>
+  );
+}
+function IconUnderline(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <path className="ql-stroke" d="M5,3V9a4.012,4.012,0,0,0,4,4H9a4.012,4.012,0,0,0,4-4V3"></path>
+      <rect className="ql-fill" height="1" rx="0.5" ry="0.5" width="12" x="3" y="15"></rect>
+    </svg>
+  );
+}
+function IconBulletList(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="6" x2="15" y1="4" y2="4"></line>
+      <line className="ql-stroke" x1="6" x2="15" y1="9" y2="9"></line>
+      <line className="ql-stroke" x1="6" x2="15" y1="14" y2="14"></line>
+      <line className="ql-stroke" x1="3" x2="3" y1="4" y2="4"></line>
+      <line className="ql-stroke" x1="3" x2="3" y1="9" y2="9"></line>
+      <line className="ql-stroke" x1="3" x2="3" y1="14" y2="14"></line>
+    </svg>
+  );
+}
+function IconOrderedList(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="7" x2="15" y1="4" y2="4"></line>
+      <line className="ql-stroke" x1="7" x2="15" y1="9" y2="9"></line>
+      <line className="ql-stroke" x1="7" x2="15" y1="14" y2="14"></line>
+      <line className="ql-stroke ql-thin" x1="2.5" x2="4.5" y1="5.5" y2="5.5"></line>
+      <path
+        className="ql-fill"
+        d="M3.5,6A0.5,0.5,0,0,1,3,5.5V3.085l-0.276.138A0.5,0.5,0,0,1,2.053,3c-0.124-.247-0.023-0.324.224-0.447l1-.5A0.5,0.5,0,0,1,4,2.5v3A0.5,0.5,0,0,1,3.5,6Z"
+      ></path>
+      <path
+        className="ql-stroke ql-thin"
+        d="M4.5,10.5h-2c0-.234,1.85-1.076,1.85-2.234A0.959,0.959,0,0,0,2.5,8.156"
+      ></path>
+      <path
+        className="ql-stroke ql-thin"
+        d="M2.5,14.846a0.959,0.959,0,0,0,1.85-.109A0.7,0.7,0,0,0,3.75,14a0.688,0.688,0,0,0,.6-0.736,0.959,0.959,0,0,0-1.85-.109"
+      ></path>
+    </svg>
+  );
+}
+function IconLink(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="7" x2="11" y1="7" y2="11"></line>
+      <path
+        className="ql-even ql-stroke"
+        d="M8.9,4.577a3.476,3.476,0,0,1,.36,4.679A3.476,3.476,0,0,1,4.577,8.9C3.185,7.5,2.035,6.4,4.217,4.217S7.5,3.185,8.9,4.577Z"
+      ></path>
+      <path
+        className="ql-even ql-stroke"
+        d="M13.423,9.1a3.476,3.476,0,0,0-4.679-.36,3.476,3.476,0,0,0,.36,4.679c1.392,1.392,2.5,2.542,4.679.36S14.815,10.5,13.423,9.1Z"
+      ></path>
+    </svg>
+  );
+}
+function IconUnlink(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="7" x2="11" y1="7" y2="11" />
+      <path
+        className="ql-even ql-stroke"
+        d="M8.9,4.577a3.476,3.476,0,0,1,.36,4.679A3.476,3.476,0,0,1,4.577,8.9C3.185,7.5,2.035,6.4,4.217,4.217S7.5,3.185,8.9,4.577Z"
+      />
+      <path
+        className="ql-even ql-stroke"
+        d="M13.423,9.1a3.476,3.476,0,0,0-4.679-.36,3.476,3.476,0,0,0,.36,4.679c1.392,1.392,2.5,2.542,4.679.36S14.815,10.5,13.423,9.1Z"
+      />
+      <line className="ql-stroke" x1="4" x2="14" y1="14" y2="4" />
+    </svg>
+  );
+}
+function IconClear(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 18 18" width={16} height={16} {...props}>
+      <line className="ql-stroke" x1="5" x2="13" y1="3" y2="3"></line>
+      <line className="ql-stroke" x1="6" x2="9.35" y1="12" y2="3"></line>
+      <line className="ql-stroke" x1="11" x2="15" y1="11" y2="15"></line>
+      <line className="ql-stroke" x1="15" x2="11" y1="11" y2="15"></line>
+      <rect className="ql-fill" height="1" rx="0.5" ry="0.5" width="7" x="2" y="14"></rect>
+    </svg>
+  );
+}
+import { StarterKit } from "@tiptap/starter-kit";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import { Highlight } from "@tiptap/extension-highlight";
 import { ColorPicker, useColor, ColorService } from "react-color-palette";
 import "react-color-palette/css";
-import "react-quill-new/dist/quill.snow.css";
 import "./editor.css";
 import brandsData from "./brands.json";
 // @ts-expect-error Vite raw import; typed via src/global.d.ts
@@ -20,20 +143,6 @@ import {
 import type { Brand, BrandColors, MergeGroup, Section } from "./types";
 // Lightly-typed wrappers for third-party components
 const AnyColorPicker = ColorPicker as unknown as React.ComponentType<Record<string, unknown>>;
-const AnyReactQuill = ReactQuill as unknown as React.ComponentType<Record<string, unknown>>;
-
-// Minimal Quill types used via react-quill-new ref
-type QuillInstance = {
-  root: HTMLElement;
-  getSelection: (focus?: boolean) => { index: number } | null;
-  setSelection: (index: number, length: number, source?: unknown) => void;
-  insertText: (index: number, text: string, source?: unknown) => void;
-  deleteText: (index: number, length: number, source?: unknown) => void;
-  getBounds: (index: number) => { top: number; left: number; height: number };
-  on: (ev: string, cb: (range: unknown) => void) => void;
-  off?: (ev: string, cb: (range: unknown) => void) => void;
-};
-type QuillComponent = { getEditor?: () => QuillInstance };
 
 /* ===================== DEFAULTS ===================== */
 const DEFAULT_CTA_COLOR = "#15ad36";
@@ -421,38 +530,8 @@ export default function App() {
     });
   }, [brands, brandDefaults.ctaColor]);
 
-  // --- Quill color palette + modules (hooks must be inside component)
-  const quillPalette = useMemo(() => {
-    const base = [
-      brandColors.text,
-      brandColors.primary,
-      brandColors.accent,
-      "#111827", // near-black
-      "#334155", // slate-700
-      "#0ea5e9", // accent blue
-      "#10b981", // green
-      "#f59e0b", // amber
-      "#ef4444", // red
-      "#6b7280", // gray
-      "#000000", // black
-    ];
-    return Array.from(new Set(base.map((c) => c.toLowerCase())));
-  }, [brandColors]);
-
-  const quillModules = useMemo(
-    () => ({
-      toolbar: [
-        ["bold", "italic", "underline"],
-        [{ list: "ordered" }, { list: "bullet" }],
-        [{ color: quillPalette }, { background: [] }],
-        ["link"],
-        ["clean"],
-      ],
-    }),
-    [quillPalette],
-  );
+  // Rich text editor presets (used only to signal mini vs full toolbar)
   const quillFormats = ["bold", "italic", "underline", "list", "color", "background", "link"];
-  const quillMiniModules = useMemo(() => ({ toolbar: [["bold", "italic"], ["clean"]] }), []);
   const quillMiniFormats = ["bold", "italic"];
 
   // Rebuild HEADER/FOOTER when brand changes
@@ -1055,7 +1134,6 @@ export default function App() {
                     const safe = sanitizeInlineHtml(val || "");
                     setHtml((prev) => replaceBlock(prev, "GREETING", `\n${safe}\n`));
                   }}
-                  modules={quillMiniModules}
                   formats={quillMiniFormats}
                 />
               </div>
@@ -1069,7 +1147,6 @@ export default function App() {
                     const safe = sanitizeInlineHtml(val || "");
                     setHtml((prev) => replaceBlock(prev, "SIGNOFF", `\n${safe}\n`));
                   }}
-                  modules={quillMiniModules}
                   formats={quillMiniFormats}
                 />
               </div>
@@ -1609,7 +1686,6 @@ export default function App() {
                           <ParagraphEditor
                             value={s.content || ""}
                             onChange={(val) => updateSection(s.id, { content: val })}
-                            modules={quillModules}
                             formats={quillFormats}
                           />
                           {s.content && (
@@ -1630,7 +1706,6 @@ export default function App() {
                         <ParagraphEditor
                           value={s.content || ""}
                           onChange={(val) => updateSection(s.id, { content: val })}
-                          modules={quillModules}
                           formats={quillFormats}
                         />
                         {s.content && (
@@ -1926,51 +2001,104 @@ function cryptoRandom() {
   return `id_${Math.random().toString(16).slice(2)}`;
 }
 
-type QuillModules = unknown;
-type QuillFormats = unknown;
+type QuillFormats = string[] | unknown;
 function ParagraphEditor({
   value,
   onChange,
-  modules,
   formats,
 }: {
   value: string;
   onChange: (v: string) => void;
-  modules: QuillModules;
   formats: QuillFormats;
 }) {
-  const quillRef = useRef<QuillComponent | null>(null);
-  const [open, setOpen] = useState<boolean>(false);
-  const [query, setQuery] = useState<string>("");
+  const isMini = Array.isArray(formats) && (formats as string[]).length <= 2; // GREETING / SIGNOFF
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false, // keep simple; paragraphs only
+        link: {
+          openOnClick: false,
+          autolink: false,
+          linkOnPaste: false,
+          validate: (href) => /^https?:\/\//.test(href ?? ""),
+        },
+      }),
+      TextStyle,
+      Color,
+      Highlight.configure({ multicolor: true }),
+    ],
+    content: value || "",
+    editorProps: {
+      attributes: {
+        class: `tiptap ${isMini ? "tiptap--mini" : ""}`,
+      },
+    },
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+  });
+
+  // Keep content in sync when value prop changes externally
+  useEffect(() => {
+    if (!editor) return;
+    const html = editor.getHTML();
+    if (value !== html) editor.commands.setContent(value || "", { emitUpdate: false });
+  }, [value, editor]);
+
+  // Color palette
+  const quillPalette = useMemo(
+    () => [
+      ["#000000", "#E60000", "#FF9900", "#FF9900", "#008A00", "#0066CC", "#9933FF"], // default Quill
+      ["#FFFFFF", "#FACCCC", "#FFEBCC", "#FFFFCC", "#CCE8CC", "#CCE0F5", "#EBD6FF"], // light Quill
+      ["#BBBBBB", "#F06666", "#FFC266", "#FFFF66", "#66B966", "#66A3E0", "#C285FF"], // medium Quill
+      ["#888888", "#A10000", "#B26B00", "#B2B200", "#006100", "#0047B2", "#6B24B2"], // dark Quill
+      ["#444444", "#5C0000", "#663D00", "#666600", "#003700", "#002966", "#3D1466"], // darker Quill
+    ],
+    [],
+  );
+
+  // Merge-tag menu state
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [anchor, setAnchor] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [triggerIndex, setTriggerIndex] = useState<number | null>(null);
-  const [active, setActive] = useState<number>(0); // flat index across groups
+  const [active, setActive] = useState(0);
+  const [triggerPos, setTriggerPos] = useState<number | null>(null);
+
+  // Color dropdown state
+  const [textColorOpen, setTextColorOpen] = useState(false);
+  const [bgColorOpen, setBgColorOpen] = useState(false);
+
+  // Link modal state
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkText, setLinkText] = useState("");
 
   const filteredGroups = useMemo(() => filterGroups(query), [query]);
   const flat = useMemo(
     () => filteredGroups.flatMap((g) => g.items.map((it) => ({ ...it, group: g.group }))),
     [filteredGroups],
   );
+  useEffect(() => setActive(0), [query]);
 
+  // Key handling for '#'
   useEffect(() => {
-    setActive(0);
-  }, [query]);
-
-  useEffect(() => {
-    const quill = quillRef.current?.getEditor?.();
-    if (!quill) return;
-    const root = quill.root;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
+    if (!editor) return;
+    const dom = editor.view.dom as HTMLElement;
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "#") {
         e.preventDefault();
-        const r = quill.getSelection(true);
-        if (!r) return;
-        quill.insertText(r.index, "#", "user");
-        quill.setSelection(r.index + 1, 0, "user");
-        const b = quill.getBounds(r.index + 1);
-        setAnchor({ top: b.top + b.height + 6, left: b.left });
-        setTriggerIndex(r.index);
+        const { from } = editor.state.selection;
+        editor
+          .chain()
+          .focus()
+          .insertContent("#")
+          .setTextSelection(from + 1)
+          .run();
+        const coords = editor.view.coordsAtPos(from + 1);
+        const container = dom.getBoundingClientRect();
+        setAnchor({ top: coords.top - container.top + 22, left: coords.left - container.left });
+        setTriggerPos(from);
         setQuery("");
         setActive(0);
         setOpen(true);
@@ -1981,7 +2109,14 @@ function ParagraphEditor({
 
       if (e.key === "Escape") {
         e.preventDefault();
-        if (triggerIndex != null) quill.deleteText(triggerIndex, 1, "user");
+        if (triggerPos != null) {
+          editor
+            .chain()
+            .focus()
+            .setTextSelection(triggerPos)
+            .deleteRange({ from: triggerPos, to: triggerPos + 1 })
+            .run();
+        }
         setOpen(false);
         return;
       }
@@ -1989,10 +2124,13 @@ function ParagraphEditor({
         e.preventDefault();
         if (!flat.length) return;
         const pick = flat[Math.max(0, Math.min(active, flat.length - 1))];
-        if (triggerIndex != null) {
-          quill.deleteText(triggerIndex, 1, "user");
-          quill.insertText(triggerIndex, pick.value, "user");
-          quill.setSelection(triggerIndex + pick.value.length, 0, "user");
+        if (triggerPos != null) {
+          editor
+            .chain()
+            .focus()
+            .setTextSelection({ from: triggerPos, to: triggerPos + 1 })
+            .insertContent(pick.value)
+            .run();
         }
         setOpen(false);
         return;
@@ -2011,7 +2149,14 @@ function ParagraphEditor({
         e.preventDefault();
         if (query.length) setQuery((q) => q.slice(0, -1));
         else {
-          if (triggerIndex != null) quill.deleteText(triggerIndex, 1, "user");
+          if (triggerPos != null) {
+            editor
+              .chain()
+              .focus()
+              .setTextSelection(triggerPos)
+              .deleteRange({ from: triggerPos, to: triggerPos + 1 })
+              .run();
+          }
           setOpen(false);
         }
         return;
@@ -2019,47 +2164,362 @@ function ParagraphEditor({
       if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         setQuery((q) => q + e.key);
-        const r = quill.getSelection(true);
-        const b = quill.getBounds(r?.index ?? 0);
-        setAnchor({ top: b.top + b.height + 6, left: b.left });
+        const { from } = editor.state.selection;
+        const coords = editor.view.coordsAtPos(from);
+        const container = dom.getBoundingClientRect();
+        setAnchor({ top: coords.top - container.top + 22, left: coords.left - container.left });
         return;
       }
     };
+    dom.addEventListener("keydown", onKey);
+    return () => dom.removeEventListener("keydown", onKey);
+  }, [editor, open, query, active, flat, triggerPos]);
 
-    root.addEventListener("keydown", handleKeyDown);
-    return () => root.removeEventListener("keydown", handleKeyDown);
-  }, [open, query, active, flat, triggerIndex]);
-
+  // Close color dropdowns on click outside
   useEffect(() => {
-    const quill = quillRef.current?.getEditor?.();
-    if (!quill) return;
-    const onSel = (range: unknown) => {
-      if (!range) setOpen(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (textColorOpen || bgColorOpen) {
+        const target = event.target as Element;
+        if (!target.closest(".rt-color-dropdown")) {
+          setTextColorOpen(false);
+          setBgColorOpen(false);
+        }
+      }
     };
-    quill.on("selection-change", onSel);
-    return () => quill.off?.("selection-change", onSel);
-  }, []);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [textColorOpen, bgColorOpen]);
 
   const choose = (item: { value: string }) => {
-    const quill = quillRef.current?.getEditor?.();
-    if (!quill || triggerIndex == null) return;
-    quill.deleteText(triggerIndex, 1, "user");
-    quill.insertText(triggerIndex, item.value, "user");
-    quill.setSelection(triggerIndex + item.value.length, 0, "user");
+    if (!editor || triggerPos == null) return;
+    editor
+      .chain()
+      .focus()
+      .setTextSelection({ from: triggerPos, to: triggerPos + 1 })
+      .insertContent(item.value)
+      .run();
     setOpen(false);
   };
 
+  const promptLink = () => {
+    if (!editor) return;
+    const prev = editor.getAttributes("link").href as string | undefined;
+    const selectedText = editor.state.doc.textBetween(
+      editor.state.selection.from,
+      editor.state.selection.to,
+    );
+
+    setLinkUrl(prev || "https://");
+    setLinkText(selectedText || "");
+    setShowLinkModal(true);
+  };
+
+  const saveLink = () => {
+    if (!editor) return;
+
+    if (!linkUrl.trim()) {
+      editor.chain().focus().unsetLink().run();
+    } else {
+      if (!/^https?:\/\//.test(linkUrl.trim())) {
+        alert("URL must start with http:// or https://");
+        return;
+      }
+
+      const selectedText = editor.state.doc.textBetween(
+        editor.state.selection.from,
+        editor.state.selection.to,
+      );
+      const finalLinkText = linkText.trim() || selectedText || linkUrl.trim();
+
+      // If we have custom link text or no selected text, insert/replace content
+      if (linkText.trim() || !selectedText) {
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: "text",
+            text: finalLinkText,
+            marks: [{ type: "link", attrs: { href: linkUrl.trim() } }],
+          })
+          .run();
+      } else {
+        // If we have selected text and no custom link text, just set the link mark
+        editor.chain().focus().setLink({ href: linkUrl.trim() }).run();
+      }
+    }
+
+    setShowLinkModal(false);
+    setLinkUrl("");
+    setLinkText("");
+  };
+
+  const cancelLink = () => {
+    setShowLinkModal(false);
+    setLinkUrl("");
+    setLinkText("");
+  };
+
+  if (!editor) return null;
+
   return (
     <div style={{ position: "relative" }}>
-      {/* react-quill-new types are noisy; cast component to any to allow props */}
-      <AnyReactQuill
-        ref={quillRef}
-        theme="snow"
-        value={value}
-        onChange={onChange}
-        modules={modules}
-        formats={formats}
-      />
+      {/* Toolbar */}
+      <div className={`rt-toolbar ${isMini ? "rt-toolbar--mini" : ""}`}>
+        <button
+          className={`rt-btn ${editor.isActive("bold") ? "is-active" : ""}`}
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          title="Bold"
+          type="button"
+          aria-label="Bold"
+        >
+          <IconBold />
+        </button>
+        <button
+          className={`rt-btn ${editor.isActive("italic") ? "is-active" : ""}`}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          title="Italic"
+          type="button"
+          aria-label="Italic"
+        >
+          <IconItalic />
+        </button>
+        {!isMini && (
+          <>
+            <button
+              className={`rt-btn ${editor.isActive("underline") ? "is-active" : ""}`}
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+              title="Underline"
+              type="button"
+              aria-label="Underline"
+            >
+              <IconUnderline />
+            </button>
+            <span className="rt-sep" />
+            <button
+              className={`rt-btn ${editor.isActive("bulletList") ? "is-active" : ""}`}
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              title="Bullet list"
+              type="button"
+              aria-label="Bullet list"
+            >
+              <IconBulletList />
+            </button>
+            <button
+              className={`rt-btn ${editor.isActive("orderedList") ? "is-active" : ""}`}
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              title="Ordered list"
+              type="button"
+              aria-label="Ordered list"
+            >
+              <IconOrderedList />
+            </button>
+            <span className="rt-sep" />
+            <div className="rt-color-dropdown">
+              <button
+                className="rt-btn rt-color-btn"
+                onClick={() => setTextColorOpen(!textColorOpen)}
+                title="Text color"
+                type="button"
+                aria-label="Text color"
+              >
+                <div
+                  className="rt-color-swatch"
+                  style={{ backgroundColor: editor.getAttributes("textStyle").color || "#000000" }}
+                />
+              </button>
+              {textColorOpen && (
+                <div className="rt-color-palette">
+                  {quillPalette.map((row, rowIndex) => (
+                    <div key={rowIndex} className="rt-color-row">
+                      {row.map((color) => (
+                        <button
+                          key={color}
+                          className="rt-color-option"
+                          style={{ backgroundColor: color }}
+                          onClick={() => {
+                            editor.chain().focus().setColor(color).run();
+                            setTextColorOpen(false);
+                          }}
+                          title={color}
+                          type="button"
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="rt-color-dropdown">
+              <button
+                className="rt-btn rt-color-btn"
+                onClick={() => setBgColorOpen(!bgColorOpen)}
+                title="Background color"
+                type="button"
+                aria-label="Background color"
+              >
+                <div
+                  className="rt-color-swatch"
+                  style={{
+                    backgroundColor: editor.getAttributes("highlight").color || "transparent",
+                  }}
+                />
+              </button>
+              {bgColorOpen && (
+                <div className="rt-color-palette">
+                  {quillPalette.map((row, rowIndex) => (
+                    <div key={rowIndex} className="rt-color-row">
+                      {row.map((color) => (
+                        <button
+                          key={color}
+                          className="rt-color-option"
+                          style={{ backgroundColor: color }}
+                          onClick={() => {
+                            editor.chain().focus().setHighlight({ color }).run();
+                            setBgColorOpen(false);
+                          }}
+                          title={color}
+                          type="button"
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              className="rt-btn"
+              onClick={promptLink}
+              title="Link"
+              type="button"
+              aria-label="Link"
+            >
+              <IconLink />
+            </button>
+          </>
+        )}
+        <span className="rt-sep" />
+        <button
+          className="rt-btn"
+          onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+          title="Clear formatting"
+          type="button"
+          aria-label="Clear formatting"
+        >
+          <IconClear />
+        </button>
+      </div>
+
+      {/* Link Modal */}
+      {showLinkModal && (
+        <div className="modal-backdrop" onClick={() => setShowLinkModal(false)}>
+          <div className="modal link-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <strong>Add Link</strong>
+              <button className="btn remove" onClick={cancelLink}>
+                ✕ Close
+              </button>
+            </div>
+            <div className="modal-body">
+              <div style={{ marginBottom: 16 }}>
+                <label className="label" style={{ display: "block", marginBottom: 8 }}>
+                  Link Text (optional)
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="Text to display (leave empty to use URL)"
+                />
+              </div>
+              <div>
+                <label className="label" style={{ display: "block", marginBottom: 8 }}>
+                  URL
+                </label>
+                <input
+                  type="url"
+                  className="input"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="actions">
+              <button className="btn" onClick={cancelLink}>
+                Cancel
+              </button>
+              <button className="btn primary" onClick={saveLink}>
+                Add Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Editor */}
+      <div className="rt-container">
+        <EditorContent editor={editor} />
+      </div>
+
+      {/* Bubble menu (inline formatting, like TipTap template) */}
+      {BubbleMenu && (
+        <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} className="bubble-menu">
+          <button
+            className={editor.isActive("bold") ? "is-active" : ""}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            title="Bold"
+            type="button"
+            aria-label="Bold"
+          >
+            <IconBold width={14} height={14} />
+          </button>
+          <button
+            className={editor.isActive("italic") ? "is-active" : ""}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            title="Italic"
+            type="button"
+            aria-label="Italic"
+          >
+            <IconItalic width={14} height={14} />
+          </button>
+          <button
+            className={editor.isActive("underline") ? "is-active" : ""}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            title="Underline"
+            type="button"
+            aria-label="Underline"
+          >
+            <IconUnderline width={14} height={14} />
+          </button>
+          {editor.isActive("link") ? (
+            <button
+              className="is-active"
+              onClick={() => editor.chain().focus().unsetLink().run()}
+              title="Remove link"
+              type="button"
+              aria-label="Remove link"
+            >
+              <IconUnlink width={14} height={14} />
+            </button>
+          ) : (
+            <button onClick={promptLink} title="Add link" type="button" aria-label="Add link">
+              <IconLink width={14} height={14} />
+            </button>
+          )}
+          <button
+            onClick={() => editor.chain().focus().unsetAllMarks().run()}
+            title="Clear formatting"
+            type="button"
+            aria-label="Clear formatting"
+          >
+            <IconClear width={14} height={14} />
+          </button>
+        </BubbleMenu>
+      )}
+
+      {/* Merge tag menu */}
       {open && (
         <div
           className="tag-menu"
@@ -2068,7 +2528,7 @@ function ParagraphEditor({
         >
           {flat.length ? (
             (() => {
-              let ptr = 0; // running flat index for highlight / click
+              let ptr = 0;
               return filteredGroups.map((g) => (
                 <div className="group" key={g.group}>
                   <div className="group-title">{g.group}</div>
@@ -2288,6 +2748,8 @@ function MergeInput({
           )}
         </div>
       )}
+
+      {/* Editor */}
     </div>
   );
 }

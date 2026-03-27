@@ -8,7 +8,7 @@
 
 ## Key Files & Structure
 
-- `src/App.tsx`: Core editor logic, Quill integration, template parsing, mail-merge tag management.
+- `src/App.tsx`: Core editor logic, TipTap integration, template parsing, mail-merge tag management.
 - `public/`: Static assets (favicon, logos, manifest).
 - `src/editor.css`: CSS for editor.
 - `src/template.html`: Template source.
@@ -31,14 +31,14 @@
   <strong>${Leads.First Name}</strong>,<!-- editable:end -->
   ```
 - **Mail-merge tags**: Use `${Leads.First Name}` etc. for dynamic content. Tags are grouped and managed in JS constants.
-- **Quill Editor**: Rich text fields use Quill with custom toolbars. For GREETING and SIGNOFF, only bold, italic, and clear formatting are allowed.
+- **TipTap Editor**: Rich text fields use TipTap with custom toolbars. For GREETING and SIGNOFF, only bold, italic, and clear formatting are allowed.
 - **Sanitization**: Custom sanitizers ensure output HTML is safe and compatible with email clients.
 - **Brand blocks**: Header/footer HTML for different brands is injected via JS constants.
 
 ## Integration Points
 
 - No backend/API calls; all logic is client-side.
-- External dependencies: React, Quill, Tailwind, Vite.
+- External dependencies: React, TipTap, Tailwind, Vite.
 
 ## Examples
 
@@ -49,7 +49,7 @@
 
 - Always update both the template and JS logic when adding new editable fields.
 - Preserve the comment fence format for editable blocks.
-- When editing Quill configs, restrict toolbars as needed for each field.
+- When editing TipTap configs, restrict toolbars as needed for each field.
 - Reference `README.md` for setup and workflow commands.
 
 ---

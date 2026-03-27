@@ -78,6 +78,7 @@ export function sanitizeParaHtml(html: string): string {
     "ul",
     "li",
     "span",
+    "mark",
   ]);
 
   const styleOk = (prop: string, val: string) => {
@@ -128,6 +129,41 @@ export function sanitizeParaHtml(html: string): string {
         while (el.attributes.length) el.removeAttribute(el.attributes[0].name);
         if (level > 0) el.setAttribute("style", `margin-left:${level * 20}px`);
         walk(el);
+        return;
+      }
+
+      if (tag === "mark") {
+        // Convert <mark> to <span> with background-color style for email compatibility
+        const span = document.createElement("span");
+        const styleAttr = el.getAttribute("style") || "";
+        const dataColor = el.getAttribute("data-color") || "";
+
+        // Extract background color from style or data-color attribute
+        let bgColor = "";
+        if (dataColor && styleOk("background-color", dataColor)) {
+          bgColor = dataColor;
+        } else if (styleAttr) {
+          const styles = styleAttr
+            .split(";")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          styles.forEach((pair) => {
+            const idx = pair.indexOf(":");
+            if (idx === -1) return;
+            const prop = pair.slice(0, idx).trim().toLowerCase();
+            const val = pair.slice(idx + 1).trim();
+            if (prop === "background-color" && styleOk(prop, val)) {
+              bgColor = val;
+            }
+          });
+        }
+
+        span.innerHTML = el.innerHTML;
+        if (bgColor) {
+          span.setAttribute("style", `background-color:${bgColor}`);
+        }
+        el.replaceWith(span);
+        walk(span);
         return;
       }
 
